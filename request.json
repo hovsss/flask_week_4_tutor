@@ -28,5 +28,11 @@
         "clientPhone": "yfukl",
         "clientGoal": "Для учебы",
         "clientTime": "1-2 часа в неделю"
+    },
+    {
+        "clientName": "п",
+        "clientPhone": "5ке",
+        "clientGoal": "Для путешествий",
+        "clientTime": "1-2 часа в неделю"
     }
 ]

@@ -12,6 +12,8 @@ from data import goals, teachers
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 
+from sqlalchemy.sql.expression import func
+
 WEEKDAYS = (("mon", "Понедельник"), ("tue", "Вторник"), ("wed", "Среда"), ("thu", "Четверг"), ("fri", "Пятница"),
             ("sat", "Суббота"), ("sun", "Воскресенье"))
 ALL_DATA = 'data.json'
@@ -115,8 +117,11 @@ class Request(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100))
     phone = db.Column(db.String(100))
-    goal = db.Column(db.String(100))
+    goal = db.Column(db.String(10))
+    #goal_id = db.Column(db.Integer, db.ForeignKey('goals.id'))
     time = db.Column(db.String(100))
+    #goal = db.relationship("Goal", back_populates="requests")
+
 # "clientName": "яяя з",
 # "clientPhone": "999",
 # "clientGoal": "Для путешествий",
@@ -182,11 +187,20 @@ def load_all_data():
 #### Маршруты ####
 @app.route('/')
 def render_main():
-    goals, teachers = load_all_data()
+    # goals, teachers = load_all_data()
+    #
+    # if len(teachers) > 6:
+    #     random.seed()
+    #     teachers = random.sample(teachers, 6)
 
-    if len(teachers) > 6:
-        random.seed()
-        teachers = random.sample(teachers, 6)
+    goals = Goal.query.all()
+    teachers = Teacher.query.order_by(func.random()).limit(6).all()
+
+    # Закончил здесь с сортировкой списка  #TODO
+    # select.order_by(func.random()) # for PostgreSQL, SQLite
+    # select.order_by(func.rand()) # for MySQL
+    # db.session.query(Teacher.id).all()
+
 
     return render_template('index.html', goals=goals, teachers=teachers)
 
@@ -194,7 +208,11 @@ def render_main():
 @app.route('/all/', methods=['GET', 'POST'])
 @csrf.exempt
 def all():
-    goals, teachers = load_all_data()
+
+    goals = Goal.query.all()
+    teachers = Teacher.query.all()
+
+    # goals, teachers = load_all_data()
 
     form = SortForm()
 
@@ -207,13 +225,18 @@ def all():
 
 @app.route('/goals/<goal>/')
 def render_goals_item(goal):
+
     goals, teachers = load_all_data()
 
-    # Проверка входных данных
-    if goal not in goals:
-        return render_template('error.html', text="К сожалению, вы ввели неверную цель"), 404
+    goals = Goal.query.all()
+    teachers = Teacher.query.all()
 
-    teachers = [t for t in teachers if goal in t["goals"]]
+    # # Проверка входных данных
+    # if goal not in goals:
+    #     return render_template('error.html', text="К сожалению, вы ввели неверную цель"), 404
+    #
+    # teachers = [t for t in teachers if goal in t["goals"]]
+
     return render_template('goal.html', goals=goals, teachers=teachers, goal=goal)
 
 
@@ -221,19 +244,11 @@ def render_goals_item(goal):
 def render_profiles_item(teacher_id):
     # Переход на БД
 
+    # TODO а какой из этих вариантов лучше?
     teacher = Teacher.query.get_or_404(teacher_id)
     #teacher = db.session.query(Teacher).get_or_404(id)
 
-    goals, teachers = load_all_data()
-
-    teacher = next((t for t in teachers if t["id"] == teacher_id), -1)
-
-    if teacher == -1:
-        return render_template('error.html', text="К сожалению, данной страницы не существует"), 404
-
-
-
-    return render_template('profile.html', t=teacher, goals=goals, weekdays=WEEKDAYS)
+    return render_template('profile.html', t=teacher, weekdays=WEEKDAYS, timetable=json.loads(teacher.free))
 
 
 @app.route('/request/', methods=['GET', 'POST'])
@@ -261,24 +276,36 @@ def render_request_done():
     client_goal = form.clientGoal.data
     client_time = form.clientTime.data
 
-    goal = next((g[1] for g in form.clientGoal.choices if g[0] == client_goal), -1)
-    time = next((t[1] for t in form.clientTime.choices if t[0] == client_time), -1)
+    # goal = next((g[1] for g in form.clientGoal.choices if g[0] == client_goal), -1)
+    # time = next((t[1] for t in form.clientTime.choices if t[0] == client_time), -1)
+    #
+    # if goal == -1 or time == -1:
+    #     return render_template('error.html', text="К сожалению, вы ввели неверные данные"), 404
+    #
+    # # сохраняем данные
+    # add_list_data({'clientName': client_name, 'clientPhone': client_phone, 'clientGoal': goal,
+    #                'clientTime': time}, REQUEST_DATA)
 
-    if goal == -1 or time == -1:
-        return render_template('error.html', text="К сожалению, вы ввели неверные данные"), 404
+    # TODO Доделаю после глючит
+    #goal = Goal.query.filter(Goal.code == client_goal).scalar()
+    request_t = Request(name=client_name, phone=client_phone, goal=client_goal, time=client_time)
+    db.session.add(request_t)
+    db.session.commit()
 
-    # сохраняем данные
-    add_list_data({'clientName': client_name, 'clientPhone': client_phone, 'clientGoal': goal,
-                   'clientTime': time}, REQUEST_DATA)
+    #TODO в форме подтверждения надо выводить полные имена, а не короткие коды...
 
     # переходим на request_done
     return render_template('request_done.html', clientName=client_name, clientPhone=client_phone,
-                           clientGoal=goal, clientTime=time)
+                           #clientGoal=goal, clientTime=time)
+                           clientGoal=request_t.goal, clientTime=request_t.time)
 
 
 @app.route('/booking/<int:teacher_id>/<weekday>/<time>/', methods=['GET', 'POST'])
 def render_booking_item(teacher_id, weekday, time):
     goals, teachers = load_all_data()
+
+    goals = Goal.query.all()
+    teachers = Teacher.query.all()
 
     form = BookingForm()
     if request.method == "POST":
@@ -303,9 +330,15 @@ def render_booking_item(teacher_id, weekday, time):
             teacher["free"][weekday][time] = False
 
             # сохраняем данные
-            write_data({'goals': goals, 'teachers': teachers}, ALL_DATA)
-            add_list_data({'clientName': client_name, 'clientPhone': client_phone, 'clientTeacher': teacher_id,
-                           'clientWeekday': weekday, 'clientTime': time}, BOOKING_DATA)
+            # write_data({'goals': goals, 'teachers': teachers}, ALL_DATA)
+            # add_list_data({'clientName': client_name, 'clientPhone': client_phone, 'clientTeacher': teacher_id,
+            #                'clientWeekday': weekday, 'clientTime': time}, BOOKING_DATA)
+
+            # Пытаемся перейти на БД
+            # TODO Зачем нужен back_populates ведь в это случае все работало бы и без него
+            booking = Booking(name=client_name,phone=client_phone,teacher_id=teacher_id,weekday=weekday,time=time)
+            db.session.add(booking)
+            db.session.commit()
 
             # переходим на booking_done
             return render_template('booking_done.html', clientName=client_name, clientPhone=client_phone,

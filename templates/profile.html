@@ -12,7 +12,7 @@
                             <div class="col-7">
                                 {% for goal in t.goals %}
                                     <div class="row">
-                                        <span class="badge badge-secondary mx-3 my-1">{{ goals[goal] }} </span>
+                                        <span class="badge badge-secondary mx-3 my-1">{{ goal.goal }} </span>
                                     </div>
                                 {% endfor %}
                             </div>
@@ -28,8 +28,8 @@
                         <h4 class="mb-4 mt-5">Записаться на пробный урок</h4>
                         {% for day in weekdays %}
                             <h6 class="mt-4">{{ day[1] }} </h6>
-                            {% if True in (t['free'][day[0]]).values() %}
-                                {% for hour, status in (t['free'][day[0]]).items() %}
+                            {% if True in (timetable[day[0]]).values() %}
+                                {% for hour, status in (timetable[day[0]]).items() %}
           {% if status %}
               <a href="{{ url_for('render_booking_item', teacher_id=t.id, weekday= day[0], time = hour ) }}" class="btn btn-outline-success btn-sm mr-2 my-2">{{ hour }}</a>
 
