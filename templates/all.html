@@ -24,21 +24,9 @@
           </div>
         </div>
 
-
-          {% if sorting == "randomly" %}
-            {% set sorted_teachers = teachers %}
-        {% elif sorting == "best" %}
-            {% set sorted_teachers = teachers|sort(attribute='rating', reverse=True) %}
-        {% elif sorting == "expensive" %}
-            {% set sorted_teachers = teachers|sort(attribute='price', reverse=True) %}
-        {% elif sorting == "cheap" %}
-            {% set sorted_teachers = teachers|sort(attribute='price') %}
-        {% endif %}
-
-
-        <div class="row">
+          <div class="row">
             <div class="col-12 col-lg-10 offset-lg-1 m-auto">
-                {% for t in sorted_teachers  %}
+                {% for t in teachers  %}
                     <div class="card mb-4">
                         {% include 'profile_card.html' %}
                     </div>

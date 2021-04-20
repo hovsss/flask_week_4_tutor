@@ -931,7 +931,8 @@
         "price": 900,
         "goals": [
             "travel",
-            "work"
+            "work",
+            "coding"
         ],
         "free": {
             "mon": {

@@ -1,18 +1,15 @@
 import json
-import random
 import secrets
 
 from flask import Flask, render_template, request
+from flask_migrate import Migrate
+from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import FlaskForm
 from flask_wtf.csrf import CSRFProtect
+from sqlalchemy.sql.expression import func
 from wtforms import StringField, HiddenField, RadioField, SelectField, SubmitField, validators
 
 from data import goals, teachers
-
-from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
-
-from sqlalchemy.sql.expression import func
 
 WEEKDAYS = (("mon", "Понедельник"), ("tue", "Вторник"), ("wed", "Среда"), ("thu", "Четверг"), ("fri", "Пятница"),
             ("sat", "Суббота"), ("sun", "Воскресенье"))
@@ -56,16 +53,16 @@ app.config['SECRET_KEY'] = SECRET_KEY
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///data//base.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-#app.config["SQLALCHEMY_ECHO"] = True
+# app.config["SQLALCHEMY_ECHO"] = True
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
 # Инструкция по работе
-#set FLASK_APP=app.py
-#flask db init
-#flask db migrate
-#flask db upgrade
+# set FLASK_APP=app.py
+# flask db init
+# flask db migrate
+# flask db upgrade
 
 # export FLASK_RUN_PORT=8000
 # set FLASK_RUN_PORT=8000
@@ -74,9 +71,9 @@ migrate = Migrate(app, db)
 #### MODELS ####
 
 teachers_goals_association = db.Table('teachers_goals',
-    db.Column('teacher_id', db.Integer, db.ForeignKey('teachers.id')),
-    db.Column('goal_id', db.Integer, db.ForeignKey('goals.id'))
-)
+                                      db.Column('teacher_id', db.Integer, db.ForeignKey('teachers.id')),
+                                      db.Column('goal_id', db.Integer, db.ForeignKey('goals.id'))
+                                      )
 
 
 class Teacher(db.Model):
@@ -87,10 +84,10 @@ class Teacher(db.Model):
     rating = db.Column(db.Float)
     picture = db.Column(db.String(100))
     price = db.Column(db.Integer)
-    #goals = db.Column(db.String(100))
+    # goals = db.Column(db.String(100))
     free = db.Column(db.UnicodeText)
     #
-    booking = db.relationship("Booking", back_populates = 'teacher')
+    booking = db.relationship("Booking", back_populates='teacher')
     goals = db.relationship("Goal", secondary=teachers_goals_association, back_populates="teachers")
 
 
@@ -105,6 +102,7 @@ class Booking(db.Model):
     #
     teacher = db.relationship("Teacher", back_populates="booking")
 
+
 # "clientName": "Сергей",
 # "clientPhone": "16161616",
 # "clientTeacher": 4,
@@ -118,9 +116,10 @@ class Request(db.Model):
     name = db.Column(db.String(100))
     phone = db.Column(db.String(100))
     goal = db.Column(db.String(10))
-    #goal_id = db.Column(db.Integer, db.ForeignKey('goals.id'))
+    # goal_id = db.Column(db.Integer, db.ForeignKey('goals.id'))
     time = db.Column(db.String(100))
-    #goal = db.relationship("Goal", back_populates="requests")
+    # goal = db.relationship("Goal", back_populates="requests")
+
 
 # "clientName": "яяя з",
 # "clientPhone": "999",
@@ -135,13 +134,14 @@ class Goal(db.Model):
     goal = db.Column(db.String(100))
     teachers = db.relationship("Teacher", secondary=teachers_goals_association, back_populates="goals")
 
+
 # "travel": "Для путешествий",
 # "study": "Для учебы",
 # "work": "Для работы",
 # "relocate": "Для переезда"
 
-#db.drop_all()
-#db.create_all() # создает таблицу, если она отсутсвует
+# db.drop_all()
+# db.create_all() # создает таблицу, если она отсутсвует
 ####
 
 
@@ -174,7 +174,6 @@ def add_list_data(data_to_add, data_source):
 
 
 def load_all_data():
-
     result = load_data(ALL_DATA)
     if result is None:
         result = {'goals': goals, 'teachers': teachers}
@@ -194,13 +193,12 @@ def render_main():
     #     teachers = random.sample(teachers, 6)
 
     goals = Goal.query.all()
-    teachers = Teacher.query.order_by(func.random()).limit(6).all()
+    teachers = Teacher.query.order_by(func.random()).limit(6)
 
     # Закончил здесь с сортировкой списка  #TODO
     # select.order_by(func.random()) # for PostgreSQL, SQLite
     # select.order_by(func.rand()) # for MySQL
     # db.session.query(Teacher.id).all()
-
 
     return render_template('index.html', goals=goals, teachers=teachers)
 
@@ -208,28 +206,37 @@ def render_main():
 @app.route('/all/', methods=['GET', 'POST'])
 @csrf.exempt
 def all():
-
     goals = Goal.query.all()
-    teachers = Teacher.query.all()
-
-    # goals, teachers = load_all_data()
 
     form = SortForm()
 
     if request.method == "POST":
-        return render_template('all.html', goals=goals, teachers=teachers, form=form,
-                               sorting=request.form["sort_order"])
+
+        if request.form["sort_order"] == "best":
+            teachers = Teacher.query.order_by(Teacher.rating.desc()).all()
+        elif request.form["sort_order"] == "expensive":
+            teachers = Teacher.query.order_by(Teacher.price.desc()).all()
+        elif request.form["sort_order"] == "cheap":
+            teachers = Teacher.query.order_by(Teacher.price).all()
+        else:
+            teachers = Teacher.query.order_by(func.random()).all()
+
+        return render_template('all.html', goals=goals, teachers=teachers, form=form)
+
+    # Заполненная форма выбора не передана
     else:
-        return render_template('all.html', goals=goals, teachers=teachers, form=form, sorting="randomly")
+        teachers = Teacher.query.order_by(func.random()).all()
+        return render_template('all.html', goals=goals, teachers=teachers, form=form)
 
 
 @app.route('/goals/<goal>/')
 def render_goals_item(goal):
-
-    goals, teachers = load_all_data()
+    # goals, teachers = load_all_data()
 
     goals = Goal.query.all()
-    teachers = Teacher.query.all()
+    current_goal = Goal.query.filter(Goal.code == goal).scalar()
+    # почти магия с отбором по many to many, но заработало!
+    teachers = Teacher.query.filter(Teacher.goals.contains(current_goal)).all()
 
     # # Проверка входных данных
     # if goal not in goals:
@@ -237,7 +244,7 @@ def render_goals_item(goal):
     #
     # teachers = [t for t in teachers if goal in t["goals"]]
 
-    return render_template('goal.html', goals=goals, teachers=teachers, goal=goal)
+    return render_template('goal.html', goals=goals, teachers=teachers, current_goal=current_goal)
 
 
 @app.route('/profiles/<int:teacher_id>/')
@@ -246,7 +253,7 @@ def render_profiles_item(teacher_id):
 
     # TODO а какой из этих вариантов лучше?
     teacher = Teacher.query.get_or_404(teacher_id)
-    #teacher = db.session.query(Teacher).get_or_404(id)
+    # teacher = db.session.query(Teacher).get_or_404(id)
 
     return render_template('profile.html', t=teacher, weekdays=WEEKDAYS, timetable=json.loads(teacher.free))
 
@@ -277,7 +284,8 @@ def render_request_done():
     client_time = form.clientTime.data
 
     # goal = next((g[1] for g in form.clientGoal.choices if g[0] == client_goal), -1)
-    # time = next((t[1] for t in form.clientTime.choices if t[0] == client_time), -1)
+
+    time = next((t[1] for t in form.clientTime.choices if t[0] == client_time), -1)
     #
     # if goal == -1 or time == -1:
     #     return render_template('error.html', text="К сожалению, вы ввели неверные данные"), 404
@@ -287,16 +295,16 @@ def render_request_done():
     #                'clientTime': time}, REQUEST_DATA)
 
     # TODO Доделаю после глючит
-    #goal = Goal.query.filter(Goal.code == client_goal).scalar()
-    request_t = Request(name=client_name, phone=client_phone, goal=client_goal, time=client_time)
+    goal = Goal.query.filter(Goal.code == client_goal).scalar()
+    request_t = Request(name=client_name, phone=client_phone, goal=goal.goal, time=time)
     db.session.add(request_t)
     db.session.commit()
 
-    #TODO в форме подтверждения надо выводить полные имена, а не короткие коды...
+    # TODO в форме подтверждения надо выводить полные имена, а не короткие коды...
 
     # переходим на request_done
     return render_template('request_done.html', clientName=client_name, clientPhone=client_phone,
-                           #clientGoal=goal, clientTime=time)
+                           # clientGoal=goal, clientTime=time)
                            clientGoal=request_t.goal, clientTime=request_t.time)
 
 
@@ -336,7 +344,7 @@ def render_booking_item(teacher_id, weekday, time):
 
             # Пытаемся перейти на БД
             # TODO Зачем нужен back_populates ведь в это случае все работало бы и без него
-            booking = Booking(name=client_name,phone=client_phone,teacher_id=teacher_id,weekday=weekday,time=time)
+            booking = Booking(name=client_name, phone=client_phone, teacher_id=teacher_id, weekday=weekday, time=time)
             db.session.add(booking)
             db.session.commit()
 
