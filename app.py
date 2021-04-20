@@ -4,47 +4,17 @@ import secrets
 from flask import Flask, render_template, request
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
-from flask_wtf import FlaskForm
 from flask_wtf.csrf import CSRFProtect
 from sqlalchemy.sql.expression import func
-from wtforms import StringField, HiddenField, RadioField, SelectField, SubmitField, validators
 
 from data import goals, teachers
+from forms import BookingForm, RequestForm, SortForm
 
 WEEKDAYS = (("mon", "Понедельник"), ("tue", "Вторник"), ("wed", "Среда"), ("thu", "Четверг"), ("fri", "Пятница"),
             ("sat", "Суббота"), ("sun", "Воскресенье"))
 ALL_DATA = 'data.json'
 BOOKING_DATA = 'booking.json'
 REQUEST_DATA = 'request.json'
-
-
-#### Создание форм ####
-class BookingForm(FlaskForm):
-    clientName = StringField("Вас зовут", [validators.InputRequired(message="Необходимо ввести имя")])
-    clientPhone = StringField("Ваш телефон", [validators.InputRequired(message="Необходимо ввести телефон")])
-    clientTeacher = HiddenField()
-    clientWeekday = HiddenField("")
-    clientTime = HiddenField("")
-
-
-class RequestForm(FlaskForm):
-    clientName = StringField("Вас зовут", [validators.InputRequired(message="Необходимо ввести имя")])
-    clientPhone = StringField("Ваш телефон",
-                              [validators.InputRequired(message="Необходимо ввести телефон")])
-    clientGoal = RadioField('Какая цель занятий?', default="travel",
-                            choices=[("travel", "Для путешествий"), ("study", "Для учебы"),
-                                     ("work", "Для работы"), ("relocate", "Для переезда"),
-                                     ("coding", "Для программирования")])
-    clientTime = RadioField('Сколько времени есть?', default="1-2",
-                            choices=[("1-2", "1-2 часа в неделю"), ("3-5", "3-5 часов в неделю"),
-                                     ("5-7", "5-7 часов в неделю"), ("7-10", "7-10 часов в неделю")])
-
-
-class SortForm(FlaskForm):
-    sort_order = SelectField(choices=[("randomly", "В случайном порядке"), ("best", "Сначала лучшие по рейтингу"),
-                                      ("expensive", "Сначала дорогие"), ("cheap", "Сначала недорогие")])
-    submit = SubmitField("Сортировать")
-
 
 app = Flask(__name__)
 csrf = CSRFProtect(app)
@@ -286,6 +256,8 @@ def render_request_done():
     # goal = next((g[1] for g in form.clientGoal.choices if g[0] == client_goal), -1)
 
     time = next((t[1] for t in form.clientTime.choices if t[0] == client_time), -1)
+    ####time=0
+
     #
     # if goal == -1 or time == -1:
     #     return render_template('error.html', text="К сожалению, вы ввели неверные данные"), 404
@@ -313,7 +285,9 @@ def render_booking_item(teacher_id, weekday, time):
     goals, teachers = load_all_data()
 
     goals = Goal.query.all()
-    teachers = Teacher.query.all()
+    #teachers = Teacher.query.all()
+    teacher = Teacher.query.get(teacher_id)
+
 
     form = BookingForm()
     if request.method == "POST":
@@ -323,7 +297,7 @@ def render_booking_item(teacher_id, weekday, time):
         weekday = form.clientWeekday.data
 
     day = next((w for w in WEEKDAYS if w[0] == weekday), -1)  #
-    teacher = next((t for t in teachers if t["id"] == teacher_id), -1)
+    #teacher = next((t for t in teachers if t["id"] == teacher_id), -1)
 
     # Если данные были отправлены
     if request.method == "POST":
@@ -332,15 +306,16 @@ def render_booking_item(teacher_id, weekday, time):
             client_name = form.clientName.data
             client_phone = form.clientPhone.data
 
-            if not teacher["free"][weekday][time]:
-                return render_template('error.html', text="К сожалению, указанное время занято"), 200
+            #if not teacher["free"][weekday][time]:
+            #    return render_template('error.html', text="К сожалению, указанное время занято"), 200
 
-            teacher["free"][weekday][time] = False
+            #teacher["free"][weekday][time] = False
 
             # сохраняем данные
             # write_data({'goals': goals, 'teachers': teachers}, ALL_DATA)
             # add_list_data({'clientName': client_name, 'clientPhone': client_phone, 'clientTeacher': teacher_id,
             #                'clientWeekday': weekday, 'clientTime': time}, BOOKING_DATA)
+
 
             # Пытаемся перейти на БД
             # TODO Зачем нужен back_populates ведь в это случае все работало бы и без него
