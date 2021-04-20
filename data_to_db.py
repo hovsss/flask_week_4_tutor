@@ -1,7 +1,13 @@
 import json
 
-from app import Teacher, Goal, db, teachers_goals_association
 from data import goals, teachers
+from models import Teacher, Goal, db, teachers_goals_association
+
+# TODO без этого костыля не работает данный модуль заполнения таблиц со следующей ошибкой, можно сделать лучше?
+# No application found. Either work inside a view function or push an application context.
+# See http://flask-sqlalchemy.pocoo.org/contexts/.
+from app import app
+app.app_context().push()
 
 # Удаляем данные из таблиц, чтобы исключить дубли
 db.session.query(Goal).delete(synchronize_session=False)

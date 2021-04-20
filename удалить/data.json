@@ -3,7 +3,8 @@
         "travel": "Для путешествий",
         "study": "Для учебы",
         "work": "Для работы",
-        "relocate": "Для переезда"
+        "relocate": "Для переезда",
+        "coding": "Для программирования"
     },
     "teachers": [
         {
@@ -22,7 +23,7 @@
                 "mon": {
                     "8:00": false,
                     "10:00": true,
-                    "12:00": false,
+                    "12:00": true,
                     "14:00": false,
                     "16:00": false,
                     "18:00": false,
@@ -358,7 +359,7 @@
                     "10:00": false,
                     "12:00": false,
                     "14:00": false,
-                    "16:00": false,
+                    "16:00": true,
                     "18:00": true,
                     "20:00": true,
                     "22:00": true
@@ -686,7 +687,8 @@
             "price": 1700,
             "goals": [
                 "relocate",
-                "work"
+                "work",
+                "coding"
             ],
             "free": {
                 "mon": {
@@ -769,7 +771,8 @@
             "rating": 4.1,
             "price": 1200,
             "goals": [
-                "work"
+                "work",
+                "coding"
             ],
             "free": {
                 "mon": {
@@ -854,7 +857,8 @@
             "goals": [
                 "travel",
                 "study",
-                "work"
+                "work",
+                "coding"
             ],
             "free": {
                 "mon": {
@@ -938,7 +942,8 @@
             "price": 900,
             "goals": [
                 "travel",
-                "work"
+                "work",
+                "coding"
             ],
             "free": {
                 "mon": {
